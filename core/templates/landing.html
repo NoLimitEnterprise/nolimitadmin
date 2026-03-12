@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>No Limit Webhosting - Secure Access</title>
+    <style>
+        body { background: #000; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 100px 20px; }
+        .warning { color: #ff0000; font-size: 28px; font-weight: bold; margin: 40px 0; line-height: 1.4; max-width: 900px; margin-left: auto; margin-right: auto; }
+        button { background: #ff0000; color: white; font-size: 26px; padding: 25px 60px; border: none; border-radius: 8px; cursor: pointer; margin-top: 40px; }
+        button:hover { background: #cc0000; }
+        #fingerprint-data { display: none; }
+    </style>
+</head>
+<body>
+    <h1>No Limit Webhosting</h1>
+    <div class="warning">
+        PRESSING THIS BUTTON GOES TO OUR LOGIN, A SECURED AREA.<br>
+        PRESSING THIS BUTTON YOU AGREE TO BE LOGGED AND AGREE TO OUR TOS.<br>
+        ALL ACTIVITY IS LOGGED, TRACED AND FINGERPRINTED.
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">I AGREE – ENTER SECURED AREA</button>
+    </form>
+
+    <!-- Hidden form for JS fingerprint POST (optional future use) -->
+    <form id="fingerprint-form" action="/log-fingerprint/" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="fingerprint" id="fingerprint-data">
+    </form>
+
+    <script>
+        // Aggressive browser fingerprinting (all client-side)
+        async function getFingerprint() {
+            const data = {
+                userAgent: navigator.userAgent,
+                language: navigator.language || navigator.userLanguage,
+                languages: navigator.languages ? navigator.languages.join(',') : '',
+                platform: navigator.platform,
+                hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
+                deviceMemory: navigator.deviceMemory || 'unknown',
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                screen: `${screen.width}x${screen.height}x${screen.colorDepth}`,
+                pixelRatio: window.devicePixelRatio,
+                touchSupport: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+                plugins: Array.from(navigator.plugins || []).map(p => p.name).join(','),
+            };
+
+            // Canvas fingerprint
+            const canvas = document.createElement('canvas');
+            canvas.width = 200;
+            canvas.height = 60;
+            const ctx = canvas.getContext('2d');
+            ctx.textBaseline = 'top';
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#f60';
+            ctx.fillRect(125, 1, 62, 20);
+            ctx.fillStyle = '#069';
+            ctx.fillText('NoLimitWebhosting', 2, 15);
+            ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+            ctx.fillText('NoLimitWebhosting', 4, 17);
+            data.canvasHash = canvas.toDataURL();  // simple hashable string
+
+            // WebGL fingerprint (if available)
+            try {
+                const glCanvas = document.createElement('canvas');
+                const gl = glCanvas.getContext('webgl') || glCanvas.getContext('experimental-webgl');
+                if (gl) {
+                    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                    data.webglVendor = debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : 'unknown';
+                    data.webglRenderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'unknown';
+                }
+            } catch (e) {}
+
+            return data;
+        }
+
+        // Run fingerprint on page load (passive collection)
+        getFingerprint().then(fp => {
+            console.log('Fingerprint collected:', fp);
+            // Optional: POST to server if you add a /log-fingerprint/ endpoint later
+            // document.getElementById('fingerprint-data').value = JSON.stringify(fp);
+            // document.getElementById('fingerprint-form').submit();
+        });
+    </script>
+</body>
+</html>

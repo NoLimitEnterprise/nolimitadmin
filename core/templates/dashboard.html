@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - No Limit Webhosting</title>
+    <style>
+        body { background: #000; color: #0f0; font-family: monospace; padding: 40px; }
+        h1 { color: #fff; }
+        .card { background: #111; border: 1px solid #333; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .status-down { color: #ff0000; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Welcome, {{ request.user.username }} - No Limit Webhosting Dashboard</h1>
+    
+    <div class="card">
+        <h2>Cluster Status</h2>
+        <p class="status-down">Monitoring offline - program down</p>
+    </div>
+    
+    <div class="card">
+        <h2>Network Scan</h2>
+        <p class="status-down">Not running</p>
+    </div>
+    
+    <div class="card">
+        <h2>Hosted Sites & Security</h2>
+        <p>Coming soon - full list of hosted domains and logs</p>
+    </div>
+</body>
+</html>

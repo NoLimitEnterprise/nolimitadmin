@@ -1,0 +1,51 @@
+# Python / Django
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.env
+*.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Virtual environments
+venv/
+env/
+ENV/
+*.venv
+
+# Django specific
+*.log
+*.pot
+*.mo
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/           # collected static (don't commit if using collectstatic)
+*.sqlite3
+
+# Migrations (optional: commit if you want versioned schema, but many teams .gitignore and regenerate)
+# */migrations/*.py     # Uncomment if you regenerate migrations on deploy
+
+# IDE / editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Testing / coverage
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Large / temp files
+*.bak
+*.tmp
+*.bak.*
