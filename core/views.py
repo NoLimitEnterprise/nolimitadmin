@@ -1,3 +1,8 @@
+import json
+import logging
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
@@ -42,3 +47,34 @@ def dynamic_login(request, slug):
 @login_required
 def dashboard(request):
     return render(request, 'dashboard.html')
+
+@csrf_exempt
+@require_POST
+def log_fingerprint(request):
+    """
+    Receives browser fingerprint data via POST and logs it.
+    Called automatically from landing page on load.
+    """
+    try:
+        # Since we're using FormData with hidden input, parse as form
+        fingerprint_json = request.POST.get('fingerprint')
+        if not fingerprint_json:
+            return JsonResponse({'error': 'No fingerprint data'}, status=400)
+
+        fingerprint = json.loads(fingerprint_json)
+
+        # Log to Django logger (will go to console/file depending on settings)
+        logger.info("[FINGERPRINT] Received from IP: %s", request.META.get('REMOTE_ADDR', 'unknown'))
+        logger.info(json.dumps(fingerprint, indent=2))
+
+        # Optional future: save to DB
+        # from .models import FingerprintLog
+        # FingerprintLog.objects.create(data=fingerprint, ip=request.META.get('REMOTE_ADDR'))
+
+        return JsonResponse({'status': 'logged'}, status=200)
+    
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        logger.error(f"Fingerprint logging error: {str(e)}")
+        return JsonResponse({'error': 'Server error'}, status=500)

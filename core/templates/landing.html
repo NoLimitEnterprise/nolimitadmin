@@ -1,38 +1,98 @@
+{% load static %}
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bg-black text-white">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>No Limit Webhosting - Secure Access</title>
+    <title>No Limit Enterprise - Secure Access</title>
+
+    <!-- Security Headers via meta (supplemental; real headers in Apache/Django) -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+    <!-- CSP - adjust as needed; this is strict but allows our CDN + inline if careful -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline';
+        style-src 'self' https://fonts.googleapis.com 'unsafe-inline';
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data:;
+        connect-src 'self';
+    ">
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
-        body { background: #000; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 100px 20px; }
-        .warning { color: #ff0000; font-size: 28px; font-weight: bold; margin: 40px 0; line-height: 1.4; max-width: 900px; margin-left: auto; margin-right: auto; }
-        button { background: #ff0000; color: white; font-size: 26px; padding: 25px 60px; border: none; border-radius: 8px; cursor: pointer; margin-top: 40px; }
-        button:hover { background: #cc0000; }
-        #fingerprint-data { display: none; }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .glow-red { box-shadow: 0 0 25px rgba(239, 68, 68, 0.5); }
     </style>
 </head>
-<body>
-    <h1>No Limit Webhosting</h1>
-    <div class="warning">
-        PRESSING THIS BUTTON GOES TO OUR LOGIN, A SECURED AREA.<br>
-        PRESSING THIS BUTTON YOU AGREE TO BE LOGGED AND AGREE TO OUR TOS.<br>
-        ALL ACTIVITY IS LOGGED, TRACED AND FINGERPRINTED.
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-gray-950 to-black px-4 py-12">
+
+    <div class="w-full max-w-3xl text-center space-y-10">
+        <!-- Logo + Branding -->
+        <div>
+            <img 
+                src="{% static '/admin/images/mainlogo.jpg' %}" 
+                alt="No Limit Enterprise" 
+                class="mx-auto h-40 md:h-48 w-auto mb-6 rounded-xl shadow-2xl glow-red object-contain transition-transform duration-300 hover:scale-105"
+            >
+            <h1 class="text-5xl md:text-7xl font-bold tracking-tight text-white">
+                No Limit Enterprise
+            </h1>
+            <p class="mt-4 text-xl md:text-2xl text-gray-400 font-medium">
+                Secure Admin Portal
+            </p>
+        </div>
+
+        <!-- Warning Card -->
+        <div class="bg-gray-900/70 backdrop-blur-md border border-red-800/60 rounded-2xl p-8 md:p-12 shadow-2xl glow-red">
+            <div class="text-red-500 text-2xl md:text-3xl font-bold mb-6 tracking-wide">
+                SECURED AREA – AUTHORIZED ACCESS ONLY
+            </div>
+            <div class="text-lg md:text-xl text-gray-200 space-y-4 leading-relaxed">
+                <p>Clicking below redirects to our authenticated login zone.</p>
+                <p>By continuing, you acknowledge and agree to:</p>
+                <ul class="list-disc list-inside max-w-md mx-auto text-left">
+                    <li>All activity is logged, traced, and fingerprinted</li>
+                    <li>Compliance with our <a href="#" class="text-red-400 hover:text-red-300 underline">Terms of Service</a></li>
+                    <li>Strict prohibition on unauthorized access</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Agree Button -->
+        <form method="post">
+            {% csrf_token %}
+            <button 
+                type="submit"
+                class="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-2xl md:text-3xl font-bold py-6 px-16 rounded-xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-red-500/50 glow-red shadow-lg"
+            >
+                I AGREE – ENTER SECURED AREA
+            </button>
+        </form>
+
+        <!-- Footer -->
+        <p class="mt-16 text-sm text-gray-500">
+            © 2026 No Limit Enterprise. All rights reserved.<br>
+            Authorized personnel only. All sessions monitored.
+        </p>
     </div>
 
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit">I AGREE – ENTER SECURED AREA</button>
-    </form>
-
-    <!-- Hidden form for JS fingerprint POST (optional future use) -->
-    <form id="fingerprint-form" action="/log-fingerprint/" method="post">
+    <!-- Fingerprint POST form (hidden) -->
+    <form id="fingerprint-form" action="{% url 'log_fingerprint' %}" method="post" class="hidden">
         {% csrf_token %}
         <input type="hidden" name="fingerprint" id="fingerprint-data">
     </form>
 
     <script>
-        // Aggressive browser fingerprinting (all client-side)
+        // Fingerprint collection + immediate POST
         async function getFingerprint() {
             const data = {
                 userAgent: navigator.userAgent,
@@ -48,22 +108,18 @@
                 plugins: Array.from(navigator.plugins || []).map(p => p.name).join(','),
             };
 
-            // Canvas fingerprint
+            // Canvas
             const canvas = document.createElement('canvas');
-            canvas.width = 200;
-            canvas.height = 60;
+            canvas.width = 200; canvas.height = 60;
             const ctx = canvas.getContext('2d');
             ctx.textBaseline = 'top';
             ctx.font = '14px Arial';
-            ctx.fillStyle = '#f60';
-            ctx.fillRect(125, 1, 62, 20);
-            ctx.fillStyle = '#069';
-            ctx.fillText('NoLimitWebhosting', 2, 15);
-            ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-            ctx.fillText('NoLimitWebhosting', 4, 17);
-            data.canvasHash = canvas.toDataURL();  // simple hashable string
+            ctx.fillStyle = '#f60'; ctx.fillRect(125, 1, 62, 20);
+            ctx.fillStyle = '#069'; ctx.fillText('NoLimitEnterprise', 2, 15);
+            ctx.fillStyle = 'rgba(102, 204, 0, 0.7)'; ctx.fillText('NoLimitEnterprise', 4, 17);
+            data.canvasHash = canvas.toDataURL();
 
-            // WebGL fingerprint (if available)
+            // WebGL
             try {
                 const glCanvas = document.createElement('canvas');
                 const gl = glCanvas.getContext('webgl') || glCanvas.getContext('experimental-webgl');
@@ -77,12 +133,27 @@
             return data;
         }
 
-        // Run fingerprint on page load (passive collection)
+        // Run on load + POST to endpoint
         getFingerprint().then(fp => {
             console.log('Fingerprint collected:', fp);
-            // Optional: POST to server if you add a /log-fingerprint/ endpoint later
-            // document.getElementById('fingerprint-data').value = JSON.stringify(fp);
-            // document.getElementById('fingerprint-form').submit();
+            
+            // POST to server
+            const form = document.getElementById('fingerprint-form');
+            const input = document.getElementById('fingerprint-data');
+            input.value = JSON.stringify(fp);
+            
+            fetch('{% url "log_fingerprint" %}', {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'  // if not using FormData fully
+                }
+            })
+            .then(response => {
+                if (response.ok) console.log('Fingerprint logged successfully');
+                else console.error('Fingerprint log failed');
+            })
+            .catch(err => console.error('Error sending fingerprint:', err));
         });
     </script>
 </body>

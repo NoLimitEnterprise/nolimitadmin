@@ -5,4 +5,4 @@ urlpatterns = [
     path('', views.landing, name='landing'),
     path('auth/<slug:slug>/login/', views.dynamic_login, name='dynamic_login'),
     path('dashboard/', views.dashboard, name='dashboard'),
-]
+    path('log-fingerprint/', views.log_fingerprint, name='log_fingerprint'),]
