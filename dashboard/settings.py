@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core',     # our main app for landing/login/dashboard
     'cluster',  # for future Proxmox/network data
+    'monitor',  # for future NPM/hosted site data]
 ]
 
 MIDDLEWARE = [
