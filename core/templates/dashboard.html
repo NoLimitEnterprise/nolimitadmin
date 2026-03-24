@@ -12,20 +12,17 @@
 </head>
 <body>
     <h1>Welcome, {{ request.user.username }} - No Limit Webhosting Dashboard</h1>
-    
-    <div class="card">
-        <h2>Cluster Status</h2>
-        <p class="status-down">Monitoring offline - program down</p>
-    </div>
-    
-    <div class="card">
-        <h2>Network Scan</h2>
-        <p class="status-down">Not running</p>
-    </div>
-    
-    <div class="card">
-        <h2>Hosted Sites & Security</h2>
-        <p>Coming soon - full list of hosted domains and logs</p>
-    </div>
+<h2>Node Overview</h2>
+<div id="nodes"></div>
+
+<script>
+setInterval(() => {
+    fetch('/monitor/api/nodes/')  // we'll add this view next
+        .then(r => r.json())
+        .then(data => {
+            // render cards
+        });
+}, 10000);
+</script>
 </body>
 </html>

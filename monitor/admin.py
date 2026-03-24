@@ -1,15 +1,21 @@
 from django.contrib import admin
-from .models import NetworkHost, ProxmoxVM, HostedSite
+from .models import Node, NodeSnapshot, ProxmoxVM, SystemService, NetworkConnection, PacketCapture
 
-@admin.register(NetworkHost)
-class NetworkHostAdmin(admin.ModelAdmin):
-    list_display = ('ip', 'hostname', 'status', 'open_ports', 'last_seen')
-    search_fields = ('ip', 'hostname')
+@admin.register(Node)
+class NodeAdmin(admin.ModelAdmin):
+    list_display = ('hostname', 'last_seen', 'is_online')
+    list_filter = ('is_online',)
 
 @admin.register(ProxmoxVM)
 class ProxmoxVMAdmin(admin.ModelAdmin):
-    list_display = ('vmid', 'name', 'status', 'node', 'cpu', 'memory', 'last_updated')
+    list_display = ('name', 'vmid', 'vm_type', 'status', 'node')
+    list_filter = ('node', 'vm_type', 'status')
 
-@admin.register(HostedSite)
-class HostedSiteAdmin(admin.ModelAdmin):
-    list_display = ('domain', 'forward_to', 'ssl_enabled', 'status', 'last_scanned')
+@admin.register(SystemService)
+class SystemServiceAdmin(admin.ModelAdmin):
+    list_display = ('name', 'status', 'node')
+    list_filter = ('node', 'status')
+
+admin.site.register(NodeSnapshot)
+admin.site.register(NetworkConnection)
+admin.site.register(PacketCapture)
