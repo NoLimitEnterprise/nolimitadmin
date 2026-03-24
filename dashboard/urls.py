@@ -7,5 +7,5 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
-    path('monitor/', include('monitor.urls')),   # <-- Our new deep monitoring API
+    path('monitor/', include('monitor.urls')),   # ← This was missing
 ]

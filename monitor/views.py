@@ -1,5 +1,6 @@
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 import json
 from .models import Node, NodeSnapshot, ProxmoxVM, SystemService, NetworkConnection, PacketCapture
@@ -21,22 +22,19 @@ def agent_post(request):
         if not hostname:
             return JsonResponse({'error': 'hostname is required'}, status=400)
 
-        # Update or create the Node
-        node, created = Node.objects.get_or_create(hostname=hostname)
+        node, _ = Node.objects.get_or_create(hostname=hostname)
         node.is_online = True
         node.last_seen = timezone.now()
         if 'proxmox_version' in payload:
-            node.proxmox_version = payload.get('proxmox_version', node.proxmox_version)
+            node.proxmox_version = payload.get('proxmox_version', '')
         node.save()
 
-        # Save the FULL raw snapshot (this is where "every bit of data" lives)
         NodeSnapshot.objects.create(node=node, data=payload)
 
-        # Normalize VMs / LXCs for fast dashboard queries
+        # Normalize VMs
         for vm_data in payload.get('vms', []):
             ProxmoxVM.objects.update_or_create(
-                node=node,
-                vmid=vm_data['vmid'],
+                node=node, vmid=vm_data.get('vmid'),
                 defaults={
                     'name': vm_data.get('name', ''),
                     'vm_type': vm_data.get('type', 'lxc'),
@@ -48,11 +46,10 @@ def agent_post(request):
                 }
             )
 
-        # Normalize running services
+        # Normalize Services
         for svc in payload.get('services', []):
             SystemService.objects.update_or_create(
-                node=node,
-                name=svc['name'],
+                node=node, name=svc.get('name', ''),
                 defaults={
                     'status': svc.get('status', 'unknown'),
                     'memory_bytes': svc.get('memory_bytes', 0),
@@ -61,48 +58,42 @@ def agent_post(request):
                 }
             )
 
-        # Save recent network connections (limit to avoid DB bloat)
-        for conn in payload.get('connections', [])[:1000]:
-            NetworkConnection.objects.create(
-                node=node,
-                src_ip=conn.get('src_ip'),
-                dst_ip=conn.get('dst_ip'),
-                src_port=conn.get('src_port'),
-                dst_port=conn.get('dst_port'),
-                protocol=conn.get('protocol', 'tcp'),
-                state=conn.get('state', ''),
-            )
-
         return JsonResponse({
             'status': 'success',
             'node': hostname,
-            'snapshot_saved': True,
-            'vms_updated': len(payload.get('vms', [])),
-            'services_updated': len(payload.get('services', []))
+            'snapshot_saved': True
         })
 
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
 
 def start_packet_capture(request, hostname):
-    """Trigger packet capture on vmbr0 (called from dashboard button)"""
-    try:
-        node = Node.objects.get(hostname=hostname)
-        capture = PacketCapture.objects.create(
-            node=node,
-            started_at=timezone.now(),
-            duration=120
-        )
-        # TODO: Later we can SSH or have the agent trigger tcpdump
-        return JsonResponse({
-            'status': 'capture_requested',
-            'capture_id': capture.id,
-            'hostname': hostname,
-            'duration': 120,
-            'interface': 'vmbr0'
-        })
-    except Node.DoesNotExist:
-        return JsonResponse({'error': 'Node not found'}, status=404)
+    node = get_object_or_404(Node, hostname=hostname)
+    capture = PacketCapture.objects.create(node=node, started_at=timezone.now())
+    return JsonResponse({'status': 'capture_requested', 'hostname': hostname})
+
+
+def nodes_list(request):
+    """Return all nodes for overview cards"""
+    nodes = Node.objects.all().order_by('hostname')
+    data = [{
+        'hostname': n.hostname,
+        'last_seen': n.last_seen.isoformat(),
+        'is_online': n.is_online,
+    } for n in nodes]
+    return JsonResponse(data, safe=False)
+
+
+def node_latest(request, hostname):
+    """Return latest data for a node"""
+    node = get_object_or_404(Node, hostname=hostname)
+    latest = NodeSnapshot.objects.filter(node=node).order_by('-timestamp').first()
+    
+    if not latest:
+        return JsonResponse({'vms': [], 'services': [], 'connections': []})
+
+    data = latest.data.copy()
+    data['vms'] = list(ProxmoxVM.objects.filter(node=node).values())
+    data['services'] = list(SystemService.objects.filter(node=node).values())
+    return JsonResponse(data)
