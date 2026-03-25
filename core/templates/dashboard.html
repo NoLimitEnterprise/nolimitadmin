@@ -5,25 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>No Limit Webhosting Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background: #0d1117; color: #c9d1d9; font-family: system-ui, -apple-system, sans-serif; }
-        .card { background: #161b22; border: 1px solid #30363d; }
-        .text-success { color: #39d353 !important; }
-        h1, h4 { color: #58a6ff; }
-        .table-dark { --bs-table-bg: #161b22; --bs-table-color: #c9d1d9; }
+        body { background: #0d1117; color: #c9d1d9; font-family: system-ui, sans-serif; }
+        .card { background: #161b22; border: 1px solid #30363d; transition: all 0.2s; }
+        .card:hover { transform: translateY(-4px); border-color: #58a6ff; }
+        .node-card { border-left: 5px solid #39d353; }
+        .status-running { background: #238636; color: white; }
+        .status-stopped { background: #da3633; color: white; }
+        h1 { color: #58a6ff; }
+        .refresh { color: #39d353; font-size: 0.9rem; }
     </style>
 </head>
 <body class="p-4">
     <div class="container-fluid">
-        <h1>Welcome, brandon - No Limit Webhosting Dashboard</h1>
-        <p class="text-success">Node Overview (Live data updating every 10s)</p>
+        <h1 class="mb-1">Welcome, brandon - No Limit Webhosting Dashboard</h1>
+        <p class="refresh mb-4">Node Overview <span class="text-success">(Live • updating every 10s)</span></p>
 
-        <div id="nodes-container" class="row g-4 mb-5"></div>
+        <!-- Nodes -->
+        <div class="row g-3 mb-5" id="nodes-container"></div>
 
-        <h4 class="mt-5 mb-3">Recent VMs / LXCs</h4>
-        <div id="vms-container" class="row g-4"></div>
+        <!-- VMs / LXCs -->
+        <h4 class="text-light mb-3">Recent VMs / LXCs</h4>
+        <div class="row g-3 mb-5" id="vms-container"></div>
 
-        <h4 class="mt-5 mb-3">Running Services</h4>
+        <!-- Services -->
+        <h4 class="text-light mb-3">Running Services</h4>
         <div class="table-responsive">
             <table class="table table-dark table-hover" id="services-table">
                 <thead>
@@ -31,7 +38,7 @@
                         <th>Node</th>
                         <th>Service</th>
                         <th>Status</th>
-                        <th>Memory (MB)</th>
+                        <th>Memory</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -44,53 +51,67 @@
             fetch('/monitor/api/nodes/')
                 .then(r => r.json())
                 .then(nodes => {
-                    // Nodes
                     let nodeHTML = '';
                     nodes.forEach(node => {
                         nodeHTML += `
                             <div class="col-lg-4 col-md-6">
-                                <div class="card h-100">
+                                <div class="card node-card h-100">
                                     <div class="card-body">
                                         <h5 class="card-title text-success">${node.hostname}</h5>
                                         <p class="small text-muted">Last seen: ${new Date(node.last_seen).toLocaleString()}</p>
-                                        <button class="btn btn-outline-primary btn-sm" onclick="viewNode('${node.hostname}')">View Full Details</button>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="viewNode('${node.hostname}')">
+                                                <i class="fas fa-server"></i> Details
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm" onclick="capturePackets('${node.hostname}')">
+                                                <i class="fas fa-broadcast-tower"></i> Capture
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>`;
                     });
-                    document.getElementById('nodes-container').innerHTML = nodeHTML || '<p class="text-muted">No nodes found yet...</p>';
+                    document.getElementById('nodes-container').innerHTML = nodeHTML;
+                });
 
-                    // VMs (from latest snapshot of first node for now)
-                    if (nodes.length > 0) {
-                        fetch(`/monitor/api/node/${nodes[0].hostname}/latest/`)
-                            .then(r => r.json())
-                            .then(data => {
-                                let vmHTML = '';
-                                (data.vms || []).forEach(vm => {
-                                    vmHTML += `
-                                        <div class="col-lg-3 col-md-4">
-                                            <div class="card">
-                                                <div class="card-body">
-                                                    <h6>${vm.name} <span class="badge bg-${vm.status === 'running' ? 'success' : 'secondary'}">${vm.status}</span></h6>
-                                                    <small class="text-muted">${vm.type.toUpperCase()} • VMID ${vm.vmid}</small>
-                                                </div>
-                                            </div>
-                                        </div>`;
-                                });
-                                document.getElementById('vms-container').innerHTML = vmHTML || '<p class="text-muted">No VMs detected yet</p>';
-                            });
-                    }
-                })
-                .catch(err => console.error('Error loading dashboard:', err));
+            // Load VMs from km01 for now (expand later)
+            fetch('/monitor/api/node/km01/latest/')
+                .then(r => r.json())
+                .then(data => {
+                    let vmHTML = '';
+                    (data.vms || []).forEach(vm => {
+                        const statusClass = vm.status === 'running' ? 'status-running' : 'status-stopped';
+                        vmHTML += `
+                            <div class="col-lg-3 col-md-4 col-sm-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="mb-1">${vm.name}</h6>
+                                        <span class="badge ${statusClass}">${vm.status}</span>
+                                        <small class="text-muted d-block mt-2">${vm.type.toUpperCase()} • VMID ${vm.vmid}</small>
+                                    </div>
+                                </div>
+                            </div>`;
+                    });
+                    document.getElementById('vms-container').innerHTML = vmHTML || '<p class="text-muted">No VMs detected yet</p>';
+                });
         }
 
         function viewNode(hostname) {
-            alert(`Deep dive for ${hostname} coming in next update (VMs, Services, Network, Packet Capture)`);
+            alert(`Deep dive for ${hostname} (VMs, Services, Network, History) - coming next update`);
         }
 
-        // Auto-refresh
+        function capturePackets(hostname) {
+            if (confirm(`Start 120-second packet capture on vmbr0 for ${hostname}?`)) {
+                fetch(`/monitor/api/capture/${hostname}/`)
+                    .then(r => r.json())
+                    .then(data => alert(`Packet capture started on ${hostname}!`))
+                    .catch(() => alert('Capture request sent'));
+            }
+        }
+
+        // Auto refresh
         setInterval(loadDashboard, 10000);
-        loadDashboard(); // initial load
+        loadDashboard();
     </script>
 </body>
 </html>
